@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gold Buyer's Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #C9A84C; --gold-light: #E8C96B; --gold-dark: #8B6914;
+    --bg: #0E0C09; --bg2: #161310; --bg3: #1E1A14;
+    --border: rgba(201,168,76,0.2); --text: #F0E8D8; --muted: #7A6E5A;
+    --green: #4CAF7A; --red: #CF6679;
+  }
+  body {
+    background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    padding: 32px 16px 60px;
+    background-image: radial-gradient(ellipse at 20% 0%, rgba(201,168,76,0.07) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 100%, rgba(201,168,76,0.05) 0%, transparent 50%);
+  }
+  header { text-align: center; margin-bottom: 36px; animation: fadeDown 0.6s ease both; }
+  header .eyebrow { font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; opacity: 0.8; }
+  header h1 { font-family: 'Playfair Display', serif; font-size: clamp(24px,6vw,44px); font-weight: 900; color: var(--text); line-height: 1.1; }
+  header h1 span { color: var(--gold); }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 100%; max-width: 660px; animation: fadeUp 0.6s ease both; }
+  .card + .card { margin-top: 16px; }
+  .card-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+
+  .input-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .sym { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--gold); }
+  .big-input { background: var(--bg3); border: 1px solid rgba(201,168,76,0.4); color: var(--text); font-family: 'DM Mono', monospace; font-size: 22px; padding: 10px 14px; border-radius: 8px; width: 180px; outline: none; transition: border-color 0.2s; }
+  .big-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.1); }
+  .btn-calc { background: var(--gold-dark); border: 1px solid var(--gold); color: var(--gold-light); border-radius: 8px; padding: 10px 20px; font-family: 'DM Mono', monospace; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .btn-calc:hover { background: var(--gold); color: var(--bg); }
+  .spot-confirm { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--gold-light); display: none; margin-top: 12px; }
+  .spot-confirm .unit { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); font-weight: 300; margin-left: 4px; }
+  .hint { font-size: 10px; color: var(--muted); margin-top: 8px; }
+
+  .results-grid { display: grid; gap: 10px; }
+  .karat-row {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 68px 1fr 120px 120px;
+    align-items: center; gap: 8px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .karat-row:hover { border-color: rgba(201,168,76,0.4); background: #201C16; }
+  .karat-badge { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--gold); }
+  .karat-badge .sub { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); display: block; font-weight: 300; margin-top: -2px; }
+  .dwt-input { background: var(--bg2); border: 1px solid rgba(201,168,76,0.3); color: var(--text); font-family: 'DM Mono', monospace; font-size: 16px; padding: 7px 10px; border-radius: 6px; width: 100%; outline: none; transition: border-color 0.2s; text-align: center; }
+  .dwt-input:focus { border-color: var(--gold); }
+  .price-col { text-align: right; }
+  .price-label { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .price-value { font-size: 17px; font-weight: 500; color: var(--text); }
+  .price-value.pay { color: var(--green); font-size: 18px; }
+  .price-value.subtotal { color: var(--gold-light); font-size: 18px; font-weight: 700; }
+
+  .grid-header {
+    display: grid;
+    grid-template-columns: 68px 1fr 120px 120px;
+    gap: 8px; padding: 0 18px 8px;
+    border-bottom: 1px solid var(--border); margin-bottom: 4px;
+  }
+  .gh { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); text-align: right; }
+  .gh:first-child { text-align: left; }
+  .gh.center { text-align: center; }
+
+  .total-bar {
+    margin-top: 16px;
+    background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.04));
+    border: 1px solid var(--gold); border-radius: 10px; padding: 18px 22px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .total-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); }
+  .total-amount { font-family: 'Playfair Display', serif; font-size: 38px; font-weight: 900; color: var(--gold-light); }
+  .total-detail { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .btn-reset { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 6px 14px; font-family: 'DM Mono', monospace; font-size: 10px; cursor: pointer; transition: all 0.2s; }
+  .btn-reset:hover { border-color: var(--red); color: var(--red); }
+
+  .formula-note { font-size: 10px; color: var(--muted); margin-top: 14px; line-height: 1.8; border-top: 1px solid var(--border); padding-top: 12px; }
+  .formula-note code { color: var(--gold); background: rgba(201,168,76,0.08); padding: 1px 5px; border-radius: 3px; }
+
+  .deduct-input { background: var(--bg3); border: 1px solid rgba(201,168,76,0.4); color: var(--text); font-family: 'DM Mono', monospace; font-size: 20px; padding: 9px 12px; border-radius: 8px; width: 110px; outline: none; text-align: center; transition: border-color 0.2s; }
+  .deduct-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.1); }
+
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:translateY(0)} }
+  .flash { animation: flashAnim 0.35s ease; }
+  @keyframes flashAnim { 0%{background:rgba(201,168,76,0.18)} 100%{background:var(--bg3)} }
+
+  @media (max-width: 520px) {
+    .karat-row, .grid-header { grid-template-columns: 56px 80px 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Precious Metals</div>
+  <h1>Gold <span>Buyer's</span> Calculator</h1>
+</header>
+
+<!-- Spot Price -->
+<div class="card" style="animation-delay:0.05s">
+  <div class="card-label">Today's Gold Spot Price — per troy oz</div>
+  <div class="input-line">
+    <span class="sym">$</span>
+    <input class="big-input" type="number" inputmode="decimal" id="manualSpot" placeholder="e.g. 3050" min="0" step="0.01">
+    <button class="btn-calc" onclick="applyManual()">Calculate ↵</button>
+  </div>
+  <div class="spot-confirm" id="spotConfirm"><span id="spotVal">—</span><span class="unit">USD/oz active</span></div>
+  <div class="hint" id="spotHint">Enter the current spot price and press Calculate (or hit Enter)</div>
+</div>
+
+<!-- Smelter deduction -->
+<div class="card" style="animation-delay:0.1s">
+  <div class="card-label">Smelter Deduction</div>
+  <div class="input-line">
+    <input class="deduct-input" type="number" inputmode="decimal" id="deductInput" value="2.5" min="0" max="100" step="0.1" oninput="calcAndRender()">
+    <span class="sym" style="font-size:18px">%</span>
+    <span class="hint" style="margin-top:0">deducted from each price — type to change</span>
+  </div>
+</div>
+
+<!-- Results -->
+<div class="card" style="animation-delay:0.15s">
+  <div class="card-label">Price Per DWT &amp; Purchase Total</div>
+
+  <div class="grid-header">
+    <div class="gh">Karat</div>
+    <div class="gh center">DWT qty</div>
+    <div class="gh">Pay/DWT</div>
+    <div class="gh">Subtotal</div>
+  </div>
+
+  <div class="results-grid" id="resultsGrid"></div>
+
+  <div class="total-bar">
+    <div>
+      <div class="total-label">Total Payout</div>
+      <div class="total-detail" id="totalDetail">Enter spot price &amp; DWT quantities</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div class="total-amount" id="grandTotal">$0.00</div>
+      <button class="btn-reset" onclick="resetDWT()">Clear DWT</button>
+    </div>
+  </div>
+
+  <div class="formula-note">
+    Per DWT: <code>(spot ÷ 20 ÷ 24) × (karat − 0.5) × (1 − deduction%)</code><br>
+    Subtotal = pay/DWT × quantity &nbsp;|&nbsp; Total = sum of all subtotals
+  </div>
+</div>
+
+<script>
+  const KARATS = [
+    { label:'8K',  karat:8,  effective:7.5  },
+    { label:'10K', karat:10, effective:9.5  },
+    { label:'14K', karat:14, effective:13.5 },
+    { label:'18K', karat:18, effective:17.5 },
+    { label:'24K', karat:24, effective:23.5 },
+  ];
+  let spotPrice = null;
+
+  function buildGrid() {
+    const grid = document.getElementById('resultsGrid');
+    grid.innerHTML = '';
+    KARATS.forEach((k, i) => {
+      const row = document.createElement('div');
+      row.className = 'karat-row';
+      row.id = 'row-' + k.karat;
+      row.innerHTML = `
+        <div class="karat-badge">${k.label}<span class="sub">×${k.effective}</span></div>
+        <input class="dwt-input" type="number" inputmode="decimal" id="dwt-${k.karat}" placeholder="0" min="0" step="0.01" oninput="calcAndRender()">
+        <div class="price-col">
+          <div class="price-label">Pay/DWT</div>
+          <div class="price-value pay" id="pay-${k.karat}">—</div>
+        </div>
+        <div class="price-col">
+          <div class="price-label">Subtotal</div>
+          <div class="price-value subtotal" id="sub-${k.karat}">—</div>
+        </div>`;
+      grid.appendChild(row);
+    });
+  }
+
+  function calcAndRender() {
+    if (!spotPrice) return;
+    const deductPct = parseFloat(document.getElementById('deductInput').value) || 0;
+    const factor = 1 - deductPct / 100;
+    const baseUnit = spotPrice / 20 / 24;
+    let grand = 0, totalDWT = 0, activeLines = 0;
+
+    KARATS.forEach(k => {
+      const pay = baseUnit * k.effective * factor;
+      const qty = parseFloat(document.getElementById('dwt-' + k.karat).value) || 0;
+      const sub = pay * qty;
+
+      document.getElementById('pay-' + k.karat).textContent = '$' + pay.toFixed(2);
+      document.getElementById('sub-' + k.karat).textContent = qty > 0 ? '$' + sub.toFixed(2) : '—';
+
+      if (qty > 0) { grand += sub; totalDWT += qty; activeLines++; }
+
+      const row = document.getElementById('row-' + k.karat);
+      row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+    });
+
+    document.getElementById('grandTotal').textContent = '$' + grand.toFixed(2);
+    document.getElementById('totalDetail').textContent = activeLines > 0
+      ? totalDWT.toFixed(2) + ' DWT · ' + activeLines + ' karat' + (activeLines>1?'s':'') + ' · ' + deductPct + '% deducted'
+      : 'Enter DWT quantities to see total';
+  }
+
+  function applyManual() {
+    const val = parseFloat(document.getElementById('manualSpot').value);
+    if (!isNaN(val) && val > 0) {
+      spotPrice = val;
+      document.getElementById('spotVal').textContent = '$' + val.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+      document.getElementById('spotConfirm').style.display = 'block';
+      document.getElementById('spotHint').textContent = 'Spot set — update anytime and press Calculate again';
+      calcAndRender();
+    }
+  }
+
+  function resetDWT() {
+    KARATS.forEach(k => {
+      document.getElementById('dwt-' + k.karat).value = '';
+      document.getElementById('sub-' + k.karat).textContent = '—';
+    });
+    document.getElementById('grandTotal').textContent = '$0.00';
+    document.getElementById('totalDetail').textContent = 'Enter DWT quantities to see total';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    buildGrid();
+    document.getElementById('manualSpot').addEventListener('keydown', e => {
+      if (e.key === 'Enter') applyManual();
+    });
+  });
+</script>
+</body>
+</html>
